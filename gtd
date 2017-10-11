@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+import configparser
+import os
+
+import click
+
+def read_default_config():
+    cfg_path = os.path.expanduser('~/.gtd_cfg')
+
+    if not os.path.isfile(cfg_path):
+        click.echo('no config found!')
+
+    parser = configparser.ConfigParser()
+    parser.read(cfg_path)
+    return parser
+
+
+cfg = read_default_config()
+
+
+@click.group()
+def cli():
+    pass
+
+@click.command()
+def config():
+    for s in cfg.sections():
+        for k,v in cfg[s].items():
+            click.echo('{}: {}'.format(k,v))
+
+
+@click.command()
+@click.option('--count', default=1, help='some number')
+@click.argument('name')
+def hello(count, name):
+    for x in range(count):
+        click.echo('hello {}'.format(name))
+
+
+cli.add_command(config)
+cli.add_command(hello)
+
+
+if __name__ == '__main__':
+    cli()
