@@ -3,6 +3,11 @@ import configparser
 import os
 
 import click
+import dataset
+
+
+db = dataset.connect('sqlite:///tmp.sqlite')
+
 
 def read_default_config():
     cfg_path = os.path.expanduser('~/.gtd_cfg')
@@ -16,6 +21,14 @@ def read_default_config():
 
 
 cfg = read_default_config()
+
+
+def _create_task(title):
+    """
+    Create a task.
+    """
+    table = db['task']
+    table.insert(dict(title=title, done=False))
 
 
 @click.group()
@@ -37,8 +50,23 @@ def hello(count, name):
         click.echo('hello {}'.format(name))
 
 
+@click.command('create-task')
+@click.argument('title')
+def create_task(title):
+    _create_task(title)
+
+
+@click.command('fetch-all')
+def fetch_all():
+    table = db['task']
+    for r in table.all():
+        print(r)
+
+
 cli.add_command(config)
 cli.add_command(hello)
+cli.add_command(create_task)
+cli.add_command(fetch_all)
 
 
 if __name__ == '__main__':
