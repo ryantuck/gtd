@@ -4,6 +4,7 @@ import os
 
 import click
 import dataset
+from prettytable import PrettyTable
 
 
 db = dataset.connect('sqlite:///tmp.sqlite')
@@ -59,8 +60,11 @@ def create_task(title):
 @click.command('fetch-all')
 def fetch_all():
     table = db['task']
+    keys = ['title', 'done']
+    pt = PrettyTable(keys)
     for r in table.all():
-        print(r)
+        pt.add_row([v for k,v in r.items() if k in keys])
+    print(pt)
 
 
 cli.add_command(config)
