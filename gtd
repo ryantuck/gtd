@@ -7,7 +7,6 @@ import dataset
 from prettytable import PrettyTable
 
 
-db = dataset.connect('sqlite:///tmp.sqlite')
 
 
 def read_default_config():
@@ -22,6 +21,9 @@ def read_default_config():
 
 
 cfg = read_default_config()
+db_filepath = os.path.expanduser(cfg.get('default', 'db_file'))
+conn_str = 'sqlite:///{}'.format(db_filepath)
+db = dataset.connect(conn_str)
 
 
 def _create_task(title):
