@@ -7,9 +7,10 @@ import dataset
 from prettytable import PrettyTable
 
 
-
-
 def read_default_config():
+    """
+    Read in config file.
+    """
     cfg_path = os.path.expanduser('~/.gtd_cfg')
 
     if not os.path.isfile(cfg_path):
@@ -26,12 +27,54 @@ conn_str = 'sqlite:///{}'.format(db_filepath)
 db = dataset.connect(conn_str)
 
 
-def _create_task(title):
+def _create_task(title, notes=None, done=False, project_id=None):
     """
     Create a task.
     """
     table = db['task']
     table.insert(dict(title=title, done=False))
+
+
+def _update_task(task_id, title=None, notes=None, done=None):
+    """
+    Update a task.
+    """
+    table = db['task']
+    data = dict(
+        id=task_id,
+        title=title,
+        notes=notes,
+        done=done,
+    )
+
+    valid_data = {k:v for k,v in data.items() if v is not None}
+    table.update(valid_data, ['id'])
+
+
+def _get_task(task_id):
+    """
+    Get a task.
+    """
+    table = db['task']
+    return table.find_one(id=task_id)
+
+
+def _delete_task(task_id):
+    """
+    Delete a task.
+    """
+    table = db['task']
+    table.delete(id=task_id)
+
+
+def _print_table(records):
+    """
+    Pretty print a table.
+    """
+    pt = PrettyTable([k for k in records[0].keys()])
+    for r in records:
+        pt.add_row([v for v in r.values()])
+    click.echo(pt)
 
 
 @click.group()
@@ -45,33 +88,47 @@ def config():
             click.echo('{}: {}'.format(k,v))
 
 
-@click.command()
-@click.option('--count', default=1, help='some number')
-@click.argument('name')
-def hello(count, name):
-    for x in range(count):
-        click.echo('hello {}'.format(name))
-
-
 @click.command('create-task')
 @click.argument('title')
 def create_task(title):
     _create_task(title)
 
 
+@click.command('get-task')
+@click.argument('task_id')
+def get_task(task_id):
+    t = _get_task(task_id)
+    _print_table([t])
+
+
+@click.command('update-task')
+@click.argument('task_id')
+@click.option('--title', default=None, help='change title')
+@click.option('--notes', default=None, help='change notes')
+@click.option('--done', default=None, type=bool, help='change done')
+def update_task(task_id, title, notes, done):
+    _update_task(task_id, title, notes, done)
+
+
+@click.command('delete-task')
+@click.argument('task_id')
+def delete_task(task_id):
+    _delete_task(task_id)
+
+
 @click.command('fetch-all')
 def fetch_all():
     table = db['task']
-    keys = ['title', 'done']
-    pt = PrettyTable(keys)
-    for r in table.all():
-        pt.add_row([v for k,v in r.items() if k in keys])
-    print(pt)
+    keys = ['id', 'title', 'done']
+    all_tasks = table.all()
+    _print_table([{k:v for k,v in r.items() if k in keys} for r in all_tasks])
 
 
 cli.add_command(config)
-cli.add_command(hello)
 cli.add_command(create_task)
+cli.add_command(get_task)
+cli.add_command(update_task)
+cli.add_command(delete_task)
 cli.add_command(fetch_all)
 
 
