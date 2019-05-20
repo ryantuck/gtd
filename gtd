@@ -1,179 +1,27 @@
-#!/usr/bin/env python3
-import configparser
-import os
-
+#!/usr/bin/env python3.7
 import click
-import dataset
-from prettytable import PrettyTable
+
+TODO_PATH = "/Users/ryan.tuck/Dropbox/Apps/Todotxt+/todo.txt"
 
 
-def read_default_config():
-    """
-    Read in config file.
-    """
-    cfg_path = os.path.expanduser('~/.gtd_cfg')
-
-    if not os.path.isfile(cfg_path):
-        click.echo('no config found!')
-
-    parser = configparser.ConfigParser()
-    parser.read(cfg_path)
-    return parser
+def _read():
+    with open(TODO_PATH) as f:
+        lines = f.readlines()
+    return [x.strip() for x in lines]
 
 
-cfg = read_default_config()
-db_filepath = os.path.expanduser(cfg.get('default', 'db_file'))
-conn_str = 'sqlite:///{}'.format(db_filepath)
-db = dataset.connect(conn_str)
-
-
-def _create_task(title, notes=None, done=False, project_id=None):
-    """
-    Create a task.
-    """
-    table = db['task']
-    table.insert(dict(title=title, done=False))
-
-
-def _update_task(task_id, title=None, notes=None, done=None):
-    """
-    Update a task.
-    """
-    table = db['task']
-    data = dict(
-        id=task_id,
-        title=title,
-        notes=notes,
-        done=done,
-    )
-
-    valid_data = {k:v for k,v in data.items() if v is not None}
-    table.update(valid_data, ['id'])
-
-
-def _get_tasks(id, title, notes, done):
-    """
-    Get a task.
-    """
-    table = db['task']
-    data = dict(
-        id=id,
-        title=title,
-        notes=notes,
-        done=done,
-    )
-
-    valid_data = {k:v for k,v in data.items() if v is not None}
-    return list(table.find(**valid_data))
-
-
-def _delete_task(task_id):
-    """
-    Delete a task.
-    """
-    table = db['task']
-    table.delete(id=task_id)
-
-
-def _print_table(records):
-    """
-    Pretty print a table.
-    """
-    if len(records) == 0:
-        click.echo('No records found.')
-        return None
-    pt = PrettyTable([k for k in records[0].keys()])
-    for r in records:
-        pt.add_row([v for v in r.values()])
-    click.echo(pt)
+@click.command('ls')
+def ls():
+    for line in _read():
+        print(line)
 
 
 @click.group()
 def cli():
     pass
 
-@click.command()
-def config():
-    for s in cfg.sections():
-        for k,v in cfg[s].items():
-            click.echo('{}: {}'.format(k,v))
 
-
-@click.command('new')
-@click.argument('title')
-def create_task(title):
-    _create_task(title)
-
-
-@click.command('ls')
-@click.option('--id', default=None)
-@click.option('--title', default=None)
-@click.option('--notes', default=None)
-@click.option('--done', default=None)
-def get_tasks(id, title, notes, done):
-    records = _get_tasks(id, title, notes, done)
-    _print_table(records)
-
-
-@click.command('update')
-@click.argument('task_id')
-@click.option('--title', default=None, help='change title')
-@click.option('--notes', default=None, help='change notes')
-@click.option('--done', default=None, type=bool, help='change done')
-def update_task(task_id, title, notes, done):
-    _update_task(task_id, title, notes, done)
-
-
-@click.command('rm')
-@click.argument('task_id')
-def delete_task(task_id):
-    _delete_task(task_id)
-
-
-@click.command('fetch-all')
-def fetch_all():
-    table = db['task']
-    keys = ['id', 'title', 'done']
-    all_tasks = table.all()
-    _print_table([{k:v for k,v in r.items() if k in keys} for r in all_tasks])
-
-
-@click.group('project')
-def project():
-    pass
-
-
-@click.group('task')
-def task():
-    pass
-
-
-def _ls(table_name):
-    table = db[table_name]
-    records = list(table.all())
-    _print_table(records)
-
-
-@click.command('ls')
-def ls_tasks():
-    _ls('task')
-
-
-@click.command('ls')
-def ls_projects():
-    _ls('project')
-
-
-cli.add_command(config)
-
-cli.add_command(project)
-cli.add_command(task)
-
-task.add_command(get_tasks)
-task.add_command(create_task)
-task.add_command(update_task)
-task.add_command(delete_task)
-
+cli.add_command(ls)
 
 if __name__ == '__main__':
-    cli(obj={})
+    cli()
