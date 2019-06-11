@@ -1,0 +1,5 @@
+[MASTER]
+
+disable=invalid-name,
+        fixme,
+        missing-docstring
