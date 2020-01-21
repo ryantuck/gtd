@@ -1,16 +1,20 @@
 #!/usr/bin/env python3.7
 import collections
+import datetime
 import os
 
 import click
 
 EXPECTED_KEYS = ['t']
 
-TODOTXT_DIR = "/Users/ryan/Dropbox/Apps/Todotxt+/"
+TODAY = datetime.datetime.utcnow().date().isoformat()
 
+TODOTXT_DIR = "/Users/ryan/Dropbox/Apps/Todotxt+/"
 INBOX_PATH = os.path.join(TODOTXT_DIR, "inbox.txt")
+LOG_PATH = os.path.join(TODOTXT_DIR, "log.txt")
 TODO_PATH = os.path.join(TODOTXT_DIR, "todo.txt")
 DONE_PATH = os.path.join(TODOTXT_DIR, "done.txt")
+TRACKING_PATH = os.path.join(TODOTXT_DIR, "tracking.txt")
 
 ORDERS = {
     'do': ['m', 't', 'w', 'r', 'f', 'sa', 'su'],
@@ -93,13 +97,30 @@ def missing_key(keys):
             continue
         print(line)
 
+def _date_thought(thought):
+    return f'{TODAY} {thought}'
+
+def _append(filepath, thought):
+    with open(filepath, 'a') as f:
+        f.writelines([_date_thought(thought)])
+        f.write('\n')
+
 
 @click.command('inbox')
 @click.argument('thought')
 def add_to_inbox(thought):
-    with open(INBOX_PATH, 'a') as f:
-        f.writelines([thought])
-        f.write('\n')
+    _append(INBOX_PATH, thought)
+
+@click.command('log')
+@click.argument('thought')
+def add_to_log(thought):
+    _append(LOG_PATH, thought)
+
+@click.command('track')
+@click.argument('thought')
+def add_to_tracking(thought):
+    _append(TRACKING_PATH, thought)
+
 
 
 def cat(txt_file):
@@ -113,7 +134,7 @@ def cat(txt_file):
 def overview():
     print(cat('inbox'))
     print('\n')
-    print(cat('done'))
+    print(cat('tracking'))
 
 
 @click.command('cat')
@@ -126,13 +147,15 @@ def cli():
     pass
 
 
-cli.add_command(ls)
-cli.add_command(contexts)
-cli.add_command(projects)
-cli.add_command(missing_key)
 cli.add_command(add_to_inbox)
-cli.add_command(overview)
+cli.add_command(add_to_log)
+cli.add_command(add_to_tracking)
+cli.add_command(contexts)
 cli.add_command(display_file)
+cli.add_command(ls)
+cli.add_command(missing_key)
+cli.add_command(overview)
+cli.add_command(projects)
 
 if __name__ == '__main__':
     cli()
