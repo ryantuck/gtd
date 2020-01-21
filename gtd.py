@@ -97,8 +97,10 @@ def missing_key(keys):
             continue
         print(line)
 
+
 def _date_thought(thought):
     return f'{TODAY} {thought}'
+
 
 def _append(filepath, thought):
     with open(filepath, 'a') as f:
@@ -111,16 +113,17 @@ def _append(filepath, thought):
 def add_to_inbox(thought):
     _append(INBOX_PATH, thought)
 
+
 @click.command('log')
 @click.argument('thought')
 def add_to_log(thought):
     _append(LOG_PATH, thought)
 
+
 @click.command('track')
 @click.argument('thought')
 def add_to_tracking(thought):
     _append(TRACKING_PATH, thought)
-
 
 
 def cat(txt_file):
@@ -141,6 +144,7 @@ def overview():
 @click.argument('txt_file')  # add accepted values
 def display_file(txt_file):
     print(cat(txt_file))
+
 
 @click.group()
 def cli():
