@@ -1,9 +1,16 @@
 #!/usr/bin/env python3.7
 import collections
+import os
 
 import click
 
-TODO_PATH = "/Users/ryan.tuck/Dropbox/Apps/Todotxt+/todo.txt"
+EXPECTED_KEYS = ['t']
+
+TODOTXT_DIR = "/Users/ryan/Dropbox/Apps/Todotxt+/"
+
+INBOX_PATH = os.path.join(TODOTXT_DIR, "inbox.txt")
+TODO_PATH = os.path.join(TODOTXT_DIR, "todo.txt")
+DONE_PATH = os.path.join(TODOTXT_DIR, "done.txt")
 
 ORDERS = {
     'do': ['m', 't', 'w', 'r', 'f', 'sa', 'su'],
@@ -77,7 +84,7 @@ def ls(group_by, where):
 
 
 @click.command('missing-keys')
-@click.argument('keys')
+@click.argument('keys', default='t')
 def missing_key(keys):
     keys = keys.split(',')
     for line in _read():
@@ -86,6 +93,33 @@ def missing_key(keys):
             continue
         print(line)
 
+
+@click.command('inbox')
+@click.argument('thought')
+def add_to_inbox(thought):
+    with open(INBOX_PATH, 'a') as f:
+        f.writelines([thought])
+        f.write('\n')
+
+
+def cat(txt_file):
+    print(txt_file.upper())
+    print('-' * len(txt_file))
+    with open(os.path.join(TODOTXT_DIR, f'{txt_file}.txt'), 'r') as f:
+        return f.read()
+
+
+@click.command('overview')
+def overview():
+    print(cat('inbox'))
+    print('\n')
+    print(cat('done'))
+
+
+@click.command('cat')
+@click.argument('txt_file')  # add accepted values
+def display_file(txt_file):
+    print(cat(txt_file))
 
 @click.group()
 def cli():
@@ -96,6 +130,9 @@ cli.add_command(ls)
 cli.add_command(contexts)
 cli.add_command(projects)
 cli.add_command(missing_key)
+cli.add_command(add_to_inbox)
+cli.add_command(overview)
+cli.add_command(display_file)
 
 if __name__ == '__main__':
     cli()
