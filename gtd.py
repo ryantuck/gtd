@@ -2,6 +2,7 @@
 import collections
 import datetime
 import os
+import subprocess
 
 import click
 
@@ -15,6 +16,10 @@ LOG_PATH = os.path.join(TODOTXT_DIR, "log.txt")
 TODO_PATH = os.path.join(TODOTXT_DIR, "todo.txt")
 DONE_PATH = os.path.join(TODOTXT_DIR, "done.txt")
 TRACKING_PATH = os.path.join(TODOTXT_DIR, "tracking.txt")
+
+TMP_INBOX_PATH = '/tmp/inbox-tmp'
+TAR_INBOX_PATH = '/tmp/inbox'
+
 
 ORDERS = {
     'do': ['m', 't', 'w', 'r', 'f', 'sa', 'su'],
@@ -39,6 +44,26 @@ def parse_contexts(line):
 
 def parse_projects(line):
     return [x for x in line.split() if x.startswith('+')]
+
+
+@click.command('v2i')
+def vim_to_inbox():
+    # edit blank vim canvas, wait to finish
+    subprocess.call(f'vim {TMP_INBOX_PATH}', shell=True)
+
+    # read the tmp file
+    with open(TMP_INBOX_PATH) as f:
+        body = f.read()
+
+    # append contents of tmp file to inbox
+    with open(INBOX_PATH, 'a') as f:
+        f.write('\n')
+        f.write(body)
+        f.write('\n')
+
+    # clear the tmp file
+    with open(TMP_INBOX_PATH, 'w') as f:
+        pass
 
 
 @click.command('contexts')
@@ -160,6 +185,7 @@ cli.add_command(ls)
 cli.add_command(missing_key)
 cli.add_command(overview)
 cli.add_command(projects)
+cli.add_command(vim_to_inbox)
 
 if __name__ == '__main__':
     cli()
