@@ -82,6 +82,12 @@ def vim_to_inbox():
     with open(TMP_INBOX_PATH, 'w') as f:
         pass
 
+@click.command('vim')
+@click.argument('txt_file')
+def edit_file(txt_file):
+    filepath = os.path.join(TODOTXT_DIR, f'{txt_file}.txt')
+    subprocess.call(f'vim {filepath}', shell=True)
+
 
 @click.command('contexts')
 def contexts():
@@ -210,6 +216,7 @@ cli.add_command(missing_key)
 cli.add_command(overview)
 cli.add_command(projects)
 cli.add_command(vim_to_inbox)
+cli.add_command(edit_file)
 
 if __name__ == '__main__':
     cli()
