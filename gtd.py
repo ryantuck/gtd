@@ -8,17 +8,18 @@ import click
 
 EXPECTED_KEYS = ['t']
 
-TODAY = datetime.datetime.utcnow().date().isoformat()
+TODAY = datetime.datetime.utcnow().date()
 
 TODOTXT_DIR = "/Users/ryan/Dropbox/Apps/Todotxt+/"
+# convert to enum?
 INBOX_PATH = os.path.join(TODOTXT_DIR, "inbox.txt")
 LOG_PATH = os.path.join(TODOTXT_DIR, "log.txt")
 TODO_PATH = os.path.join(TODOTXT_DIR, "todo.txt")
 DONE_PATH = os.path.join(TODOTXT_DIR, "done.txt")
+TICKLER_PATH = os.path.join(TODOTXT_DIR, "tickler.txt")
 TRACKING_PATH = os.path.join(TODOTXT_DIR, "tracking.txt")
 
 TMP_INBOX_PATH = '/tmp/inbox-tmp'
-TAR_INBOX_PATH = '/tmp/inbox'
 
 
 ORDERS = {
@@ -31,6 +32,22 @@ def _read():
     with open(TODO_PATH) as f:
         lines = list(enumerate(f.readlines()))
     return [f'{line.strip()} [{idx+1}]' for idx, line in lines]
+
+
+def display_relevant_tickler_items():
+    with open(TICKLER_PATH) as f:
+        lines = list(f.readlines())
+        items = [
+            line.strip()
+            for line in lines
+            if datetime.datetime.fromisoformat(line.split(' ')[0]).date() <= TODAY
+        ]
+    if items == []:
+        return
+    print(f'TICKLER ({len(items)})')
+    print('-------')
+    for item in items:
+        print(item)
 
 
 def parse_attributes(line):
@@ -101,6 +118,9 @@ def ls(group_by, where):
     for val in vals:
         print(f'{group_by}:{val}')
         for line in sorted(_read()):
+            if line.startswith('x '):
+                continue
+            # TODO show anything without key as well
             if parse_attributes(line).get(group_by) == val:
                 if included != [] and not any(w in line for w in included):
                     continue
@@ -124,7 +144,7 @@ def missing_key(keys):
 
 
 def _date_thought(thought):
-    return f'{TODAY} {thought}'
+    return f'{TODAY.isoformat()} {thought}'
 
 
 def _append(filepath, thought):
@@ -152,23 +172,27 @@ def add_to_tracking(thought):
 
 
 def cat(txt_file):
-    print(txt_file.upper())
-    print('-' * len(txt_file))
     with open(os.path.join(TODOTXT_DIR, f'{txt_file}.txt'), 'r') as f:
-        return f.read()
+        body = f.read()
+    lines = body.split('\n')
+    print(f'{txt_file.upper()} ({len(lines)})')
+    print('-' * len(txt_file))
+    print(body)
 
 
 @click.command('overview')
 def overview():
-    print(cat('inbox'))
+    cat('inbox')
     print('\n')
-    print(cat('tracking'))
+    cat('tracking')
+    print('\n')
+    display_relevant_tickler_items()
 
 
 @click.command('cat')
-@click.argument('txt_file')  # add accepted values
+@click.argument('txt_file')  # TODO add accepted values from enum
 def display_file(txt_file):
-    print(cat(txt_file))
+    cat(txt_file)
 
 
 @click.group()
