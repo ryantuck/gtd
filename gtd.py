@@ -6,8 +6,6 @@ import subprocess
 
 import click
 
-EXPECTED_KEYS = ['t']
-
 TODAY = datetime.datetime.utcnow().date()
 
 TODOTXT_DIR = "/Users/ryan/Dropbox/Apps/Todotxt+/"
@@ -23,15 +21,51 @@ TMP_INBOX_PATH = '/tmp/inbox-tmp'
 
 
 ORDERS = {
-    'do': ['m', 't', 'w', 'r', 'f', 'sa', 'su'],
     't': ['5m', '15m', '30m', '1h', '3h', '5d'],
 }
 
 
+class Task:
+    def __init__(self, line):
+        self.line = line
+        words = line.split()
+
+        self.is_complete = words[0] == 'x'
+        self.completion_date = get_date(words[1]) if self.is_complete else None
+
+        self.contexts = [w for w in words if w.startswith('@')]
+        self.projects = [w for w in words if w.startswith('+')]
+
+        kv_pairs = dict(w.split(':') for w in words if ':' in w)
+
+        self.due_date = get_date(kv_pairs.get('due', ''))
+        self.time_estimate = kv_pairs.get('t')
+
+        # TODO limit these to remove the already-parsed stuff
+        self.kv_pairs = kv_pairs
+
+        title_words = [
+            w
+            for idx, w in enumerate(words)
+            if not w.startswith('@')
+            and not w.startswith('+')
+            and not ':' in w
+            and not (self.is_complete and idx == 0)
+            and not (self.is_complete and self.completion_date and idx == 1)
+        ]
+        self.title = ' '.join(title_words)
+
+
+def get_date(date_str):
+    try:
+        return datetime.datetime.fromisoformat(date_str).date()
+    except ValueError:
+        return None
+
+
 def _read():
     with open(TODO_PATH) as f:
-        lines = list(enumerate(f.readlines()))
-    return [f'{line.strip()} [{idx+1}]' for idx, line in lines]
+        return [Task(l.strip()) for l in f.readlines()]
 
 
 def display_relevant_tickler_items():
@@ -48,19 +82,6 @@ def display_relevant_tickler_items():
     print('-------')
     for item in items:
         print(item)
-
-
-def parse_attributes(line):
-    pairs = [tuple(x.split(':')) for x in line.split() if ':' in x]
-    return {k: v for k, v in pairs}
-
-
-def parse_contexts(line):
-    return [x for x in line.split() if x.startswith('@')]
-
-
-def parse_projects(line):
-    return [x for x in line.split() if x.startswith('+')]
 
 
 @click.command('v2i')
@@ -82,6 +103,7 @@ def vim_to_inbox():
     with open(TMP_INBOX_PATH, 'w') as f:
         pass
 
+
 @click.command('vim')
 @click.argument('txt_file')
 def edit_file(txt_file):
@@ -91,14 +113,14 @@ def edit_file(txt_file):
 
 @click.command('contexts')
 def contexts():
-    counter = collections.Counter(c for line in _read() for c in parse_contexts(line))
+    counter = collections.Counter(c for task in _read() for c in task.contexts)
     for k, v in counter.most_common():
         print(f'{v} {k}')
 
 
 @click.command('projects')
 def projects():
-    counter = collections.Counter(c for line in _read() for c in parse_projects(line))
+    counter = collections.Counter(c for task in _read() for c in task.projects)
     for k, v in counter.most_common():
         print(f'{v} {k}')
 
@@ -113,27 +135,24 @@ def ls(group_by, where):
     excluded = [w.lstrip('~') for w in where if w.startswith('~')]
 
     all_vals = set(
-        v
-        for line in _read()
-        for k, v in parse_attributes(line).items()
-        if k == group_by
+        v for task in _read() for k, v in task.kv_pairs.items() if k == group_by
     )
     vals = sorted(all_vals)
     if group_by in ORDERS:
         vals = [v for v in ORDERS[group_by] if v in all_vals]
     for val in vals:
         print(f'{group_by}:{val}')
-        for line in sorted(_read()):
-            if line.startswith('x '):
+        for task in sorted(_read(), key=lambda x: x.title):
+            if task.is_complete:
                 continue
             # TODO show anything without key as well
-            if parse_attributes(line).get(group_by) == val:
-                if included != [] and not any(w in line for w in included):
+            if task.kv_pairs.get(group_by) == val:
+                if included != [] and not any(w in task.title for w in included):
                     continue
-                if excluded != [] and any(w in line for w in excluded):
+                if excluded != [] and any(w in task.title for w in excluded):
                     continue
                 line = ' '.join(
-                    x for x in line.split() if not x.startswith(f'{group_by}:')
+                    x for x in task.title.split() if not x.startswith(f'{group_by}:')
                 )
                 print(f'    {line}')
 
@@ -142,11 +161,10 @@ def ls(group_by, where):
 @click.argument('keys', default='t')
 def missing_key(keys):
     keys = keys.split(',')
-    for line in _read():
-        attributes = parse_attributes(line)
-        if all(key in attributes for key in keys):
+    for task in _read():
+        if all(key in task.kv_pairs for key in keys):
             continue
-        print(line)
+        print(task.line)
 
 
 def _date_thought(thought):
