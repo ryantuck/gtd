@@ -105,10 +105,11 @@ def cat(txt_file):
 def vim_to_inbox():
     # edit blank vim canvas, wait to finish
     subprocess.call(f'vim {TMP_INBOX_PATH}', shell=True)
+    now = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
     # read the tmp file
     with open(TMP_INBOX_PATH) as f:
-        body = f.read()
+        body = now + '\n' + f.read()
 
     # append contents of tmp file to inbox
     with open(INBOX_PATH, 'a') as f:
@@ -121,6 +122,11 @@ def vim_to_inbox():
         pass
 
 
+# ---------------------------------------------------------------
+# File operations
+# ---------------------------------------------------------------
+
+
 @click.command('vim')
 @click.argument('txt_file')
 def edit_file(txt_file):
@@ -128,18 +134,15 @@ def edit_file(txt_file):
     subprocess.call(f'vim {filepath}', shell=True)
 
 
-@click.command('contexts')
-def contexts():
-    counter = collections.Counter(c for task in _read() for c in task.contexts)
-    for k, v in counter.most_common():
-        print(f'{v} {k}')
+@click.command('cat')
+@click.argument('txt_file')  # TODO add accepted values from enum
+def display_file(txt_file):
+    cat(txt_file)
 
 
-@click.command('projects')
-def projects():
-    counter = collections.Counter(c for task in _read() for c in task.projects)
-    for k, v in counter.most_common():
-        print(f'{v} {k}')
+# ---------------------------------------------------------------
+# Reading
+# ---------------------------------------------------------------
 
 
 @click.command('ls')
@@ -174,6 +177,20 @@ def ls(group_by, where):
                 print(f'    {line}')
 
 
+@click.command('contexts')
+def contexts():
+    counter = collections.Counter(c for task in _read() for c in task.contexts)
+    for k, v in counter.most_common():
+        print(f'{v} {k}')
+
+
+@click.command('projects')
+def projects():
+    counter = collections.Counter(c for task in _read() for c in task.projects)
+    for k, v in counter.most_common():
+        print(f'{v} {k}')
+
+
 @click.command('missing-keys')
 @click.argument('keys', default='t')
 def missing_key(keys):
@@ -182,6 +199,20 @@ def missing_key(keys):
         if all(key in task.kv_pairs for key in keys):
             continue
         print(task.line)
+
+
+@click.command('overview')
+def overview():
+    cat('inbox')
+    print('\n')
+    cat('tracking')
+    print('\n')
+    display_relevant_tickler_items()
+
+
+# ---------------------------------------------------------------
+# Writing
+# ---------------------------------------------------------------
 
 
 @click.command('inbox')
@@ -206,19 +237,9 @@ def add_to_tracking(thought):
     _append(TRACKING_PATH, thought)
 
 
-@click.command('overview')
-def overview():
-    cat('inbox')
-    print('\n')
-    cat('tracking')
-    print('\n')
-    display_relevant_tickler_items()
-
-
-@click.command('cat')
-@click.argument('txt_file')  # TODO add accepted values from enum
-def display_file(txt_file):
-    cat(txt_file)
+# ---------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------
 
 
 @click.group()
