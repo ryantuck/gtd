@@ -20,25 +20,24 @@ TRACKING_PATH = os.path.join(TODOTXT_DIR, "tracking.txt")
 TMP_INBOX_PATH = '/tmp/inbox-tmp'
 
 
-ORDERS = {
-    't': ['5m', '15m', '30m', '1h', '3h', '5d'],
-}
+ORDERS = {'t': ['5m', '15m', '30m', '1h', '3h', '5d']}
 
 
 class Task:
     def __init__(self, line):
         self.line = line
+
         words = line.split()
 
         self.is_complete = words[0] == 'x'
-        self.completion_date = get_date(words[1]) if self.is_complete else None
+        self.completion_date = _get_date(words[1]) if self.is_complete else None
 
         self.contexts = [w for w in words if w.startswith('@')]
         self.projects = [w for w in words if w.startswith('+')]
 
         kv_pairs = dict(w.split(':') for w in words if ':' in w)
 
-        self.due_date = get_date(kv_pairs.get('due', ''))
+        self.due_date = _get_date(kv_pairs.get('due', ''))
         self.time_estimate = kv_pairs.get('t')
 
         # TODO limit these to remove the already-parsed stuff
@@ -56,7 +55,7 @@ class Task:
         self.title = ' '.join(title_words)
 
 
-def get_date(date_str):
+def _get_date(date_str):
     try:
         return datetime.datetime.fromisoformat(date_str).date()
     except ValueError:
@@ -66,6 +65,16 @@ def get_date(date_str):
 def _read():
     with open(TODO_PATH) as f:
         return [Task(l.strip()) for l in f.readlines()]
+
+
+def _date_thought(thought):
+    return f'{TODAY.isoformat()} {thought}'
+
+
+def _append(filepath, thought):
+    with open(filepath, 'a') as f:
+        f.writelines([_date_thought(thought)])
+        f.write('\n')
 
 
 def display_relevant_tickler_items():
@@ -84,7 +93,15 @@ def display_relevant_tickler_items():
         print(item)
 
 
-@click.command('v2i')
+def cat(txt_file):
+    with open(os.path.join(TODOTXT_DIR, f'{txt_file}.txt'), 'r') as f:
+        body = f.read()
+    lines = body.split('\n')
+    print(f'{txt_file.upper()} ({len(lines)})')
+    print('-' * len(txt_file))
+    print(body)
+
+
 def vim_to_inbox():
     # edit blank vim canvas, wait to finish
     subprocess.call(f'vim {TMP_INBOX_PATH}', shell=True)
@@ -167,19 +184,13 @@ def missing_key(keys):
         print(task.line)
 
 
-def _date_thought(thought):
-    return f'{TODAY.isoformat()} {thought}'
-
-
-def _append(filepath, thought):
-    with open(filepath, 'a') as f:
-        f.writelines([_date_thought(thought)])
-        f.write('\n')
-
-
 @click.command('inbox')
-@click.argument('thought')
+@click.argument('thought', default='')
 def add_to_inbox(thought):
+    # if no args are passed, default to vim interface
+    if thought == '':
+        vim_to_inbox()
+        return
     _append(INBOX_PATH, thought)
 
 
@@ -193,15 +204,6 @@ def add_to_log(thought):
 @click.argument('thought')
 def add_to_tracking(thought):
     _append(TRACKING_PATH, thought)
-
-
-def cat(txt_file):
-    with open(os.path.join(TODOTXT_DIR, f'{txt_file}.txt'), 'r') as f:
-        body = f.read()
-    lines = body.split('\n')
-    print(f'{txt_file.upper()} ({len(lines)})')
-    print('-' * len(txt_file))
-    print(body)
 
 
 @click.command('overview')
@@ -233,7 +235,6 @@ cli.add_command(ls)
 cli.add_command(missing_key)
 cli.add_command(overview)
 cli.add_command(projects)
-cli.add_command(vim_to_inbox)
 cli.add_command(edit_file)
 
 if __name__ == '__main__':
