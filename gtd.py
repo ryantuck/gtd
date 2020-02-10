@@ -105,10 +105,10 @@ def cat(txt_file):
 def vim_to_inbox():
     # edit blank vim canvas, wait to finish
     subprocess.call(f'vim {TMP_INBOX_PATH}', shell=True)
-    now = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
     # read the tmp file
     with open(TMP_INBOX_PATH) as f:
+        now = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
         body = now + '\n' + f.read()
 
     # append contents of tmp file to inbox
