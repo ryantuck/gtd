@@ -12,6 +12,7 @@ TODOTXT_DIR = "/Users/ryan/Dropbox/Apps/Todotxt+/"
 # convert to enum?
 INBOX_PATH = os.path.join(TODOTXT_DIR, "inbox.txt")
 LOG_PATH = os.path.join(TODOTXT_DIR, "log.txt")
+RECURRING_PATH = os.path.join(TODOTXT_DIR, "recurring.txt")
 TODO_PATH = os.path.join(TODOTXT_DIR, "todo.txt")
 DONE_PATH = os.path.join(TODOTXT_DIR, "done.txt")
 TICKLER_PATH = os.path.join(TODOTXT_DIR, "tickler.txt")
@@ -19,10 +20,10 @@ TRACKING_PATH = os.path.join(TODOTXT_DIR, "tracking.txt")
 
 TMP_INBOX_PATH = '/tmp/inbox-tmp'
 
-
+CADENCES = ['daily', 'weekly', 'monthly']
 ORDERS = {'t': ['5m', '15m', '30m', '1h', '3h', '5d']}
 
-
+# TODO: use attrs or dataclasses
 class Task:
     def __init__(self, line):
         self.line = line
@@ -71,9 +72,9 @@ def _date_thought(thought):
     return f'{TODAY.isoformat()} {thought}'
 
 
-def _append(filepath, thought):
+def _append(filepath, thoughts):
     with open(filepath, 'a') as f:
-        f.writelines([_date_thought(thought)])
+        f.writelines([f'{thought}\n' for thought in thoughts])
         f.write('\n')
 
 
@@ -222,19 +223,29 @@ def add_to_inbox(thought):
     if thought == '':
         vim_to_inbox()
         return
-    _append(INBOX_PATH, thought)
+    _append(INBOX_PATH, [_date_thought(thought)])
 
 
 @click.command('log')
 @click.argument('thought')
 def add_to_log(thought):
-    _append(LOG_PATH, thought)
+    _append(LOG_PATH, [_date_thought(thought)])
 
 
 @click.command('track')
 @click.argument('thought')
 def add_to_tracking(thought):
-    _append(TRACKING_PATH, thought)
+    _append(TRACKING_PATH, [_date_thought(thought)])
+
+@click.command('add-recurring')
+@click.argument('cadence')
+def add_recurring_to_todo(cadence):
+    if cadence not in CADENCES:
+        raise Exception(f'{cadence} not in {CADENCES}')
+    with open(os.path.join(TODOTXT_DIR, 'recurring.txt'), 'r') as f:
+        body = f.read()
+    lines = [line for line in body.split('\n') if f'@{cadence}' in line]
+    _append(TODO_PATH, lines)
 
 
 # ---------------------------------------------------------------
@@ -257,6 +268,7 @@ cli.add_command(missing_key)
 cli.add_command(overview)
 cli.add_command(projects)
 cli.add_command(edit_file)
+cli.add_command(add_recurring_to_todo)
 
 if __name__ == '__main__':
     cli()
