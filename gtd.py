@@ -8,27 +8,10 @@ import click
 
 TODAY = datetime.datetime.utcnow().date()
 
-TODOTXT_DIR = "/Users/ryan/Dropbox/Apps/Todotxt+/"
+TODOTXT_DIR = os.path.expanduser('~/Dropbox/Apps/Todotxt+/')
+TMP_INBOX_PATH = '/tmp/inbox-tmp'
 
 TXT_FILES = ["done", "inbox", "log", "recurring", "tickler", "todo", "tracking"]
-
-
-def _txt_path(txt_file):
-    if txt_file in TXT_FILES:
-        return os.path.join(TODOTXT_DIR, f'{txt_file}.txt')
-    raise Exception(f'{txt_file} not in {TXT_FILES}')
-
-
-# convert to enum?
-INBOX_PATH = os.path.join(TODOTXT_DIR, "inbox.txt")
-LOG_PATH = os.path.join(TODOTXT_DIR, "log.txt")
-RECURRING_PATH = os.path.join(TODOTXT_DIR, "recurring.txt")
-TODO_PATH = os.path.join(TODOTXT_DIR, "todo.txt")
-DONE_PATH = os.path.join(TODOTXT_DIR, "done.txt")
-TICKLER_PATH = os.path.join(TODOTXT_DIR, "tickler.txt")
-TRACKING_PATH = os.path.join(TODOTXT_DIR, "tracking.txt")
-
-TMP_INBOX_PATH = '/tmp/inbox-tmp'
 
 CADENCES = ['daily', 'weekly', 'monthly']
 ORDERS = {'t': ['5m', '15m', '30m', '1h', '3h', '5d']}
@@ -69,6 +52,12 @@ class Task:
             self.priority = self.line[1]
 
 
+def _txt_path(txt_file):
+    if txt_file in TXT_FILES:
+        return os.path.join(TODOTXT_DIR, f'{txt_file}.txt')
+    raise Exception(f'{txt_file} not in {TXT_FILES}')
+
+
 def _get_date(date_str):
     try:
         return datetime.datetime.fromisoformat(date_str).date()
@@ -89,42 +78,6 @@ def _append(filepath, thoughts):
     with open(filepath, 'a') as f:
         f.writelines([f'{thought}\n' for thought in thoughts])
         f.write('\n')
-
-
-def display_relevant_tickler_items():
-    with open(_txt_path('tickler')) as f:
-        lines = list(f.readlines())
-        items = [
-            line.strip()
-            for line in lines
-            if datetime.datetime.fromisoformat(line.split(' ')[0]).date() <= TODAY
-        ]
-    if items == []:
-        return
-    print(f'TICKLER ({len(items)})')
-    print('-------')
-    for item in items:
-        print(item)
-
-
-def display_overview_todos():
-    overview_todos = [
-        todo.line
-        for todo in _read_todos()
-        if todo.priority is not None or (todo.due_date and todo.due_date >= TODAY)
-    ]
-    print(f'PRIORITY TODOS ({len(overview_todos)})')
-    print('-'*len('PRIORITY TODOS'))
-    print('\n'.join(overview_todos))
-
-
-def cat(txt_file):
-    with open(os.path.join(TODOTXT_DIR, f'{txt_file}.txt'), 'r') as f:
-        body = f.read()
-    lines = body.split('\n')
-    print(f'{txt_file.upper()} ({len(lines)})')
-    print('-' * len(txt_file))
-    print(body)
 
 
 def vim_to_inbox():
@@ -155,7 +108,7 @@ def vim_to_inbox():
 @click.command('vim')
 @click.argument('txt_file')
 def edit_file(txt_file):
-    filepath = os.path.join(TODOTXT_DIR, f'{txt_file}.txt')
+    filepath = _txt_path(txt_file)
     subprocess.call(f'vim {filepath}', shell=True)
 
 
@@ -226,6 +179,42 @@ def missing_key(keys):
         print(task.line)
 
 
+def display_relevant_tickler_items():
+    with open(_txt_path('tickler')) as f:
+        lines = list(f.readlines())
+        items = [
+            line.strip()
+            for line in lines
+            if datetime.datetime.fromisoformat(line.split(' ')[0]).date() <= TODAY
+        ]
+    if items == []:
+        return
+    print(f'TICKLER ({len(items)})')
+    print('-------')
+    for item in items:
+        print(item)
+
+
+def display_overview_todos():
+    overview_todos = [
+        todo.line
+        for todo in _read_todos()
+        if todo.priority is not None or (todo.due_date and todo.due_date >= TODAY)
+    ]
+    print(f'PRIORITY TODOS ({len(overview_todos)})')
+    print('-' * len('PRIORITY TODOS'))
+    print('\n'.join(overview_todos))
+
+
+def cat(txt_file):
+    with open(_txt_path(txt_file), 'r') as f:
+        body = f.read()
+    lines = body.split('\n')
+    print(f'{txt_file.upper()} ({len(lines)})')
+    print('-' * len(txt_file))
+    print(body)
+
+
 @click.command('overview')
 def overview():
     display_overview_todos()
@@ -267,7 +256,7 @@ def add_to_tracking(thought):
 def add_recurring_to_todo(cadence):
     if cadence not in CADENCES:
         raise Exception(f'{cadence} not in {CADENCES}')
-    with open(os.path.join(TODOTXT_DIR, 'recurring.txt'), 'r') as f:
+    with open(_txt_path('recurring'), 'r') as f:
         body = f.read()
     lines = [line for line in body.split('\n') if f'@{cadence}' in line]
     _append(_txt_path('todo'), lines)
