@@ -64,6 +64,9 @@ class Task:
             and not (self.is_complete and self.completion_date and idx == 1)
         ]
         self.title = ' '.join(title_words)
+        self.priority = None
+        if self.line.startswith('('):
+            self.priority = self.line[1]
 
 
 def _get_date(date_str):
@@ -73,7 +76,7 @@ def _get_date(date_str):
         return None
 
 
-def _read():
+def _read_todos():
     with open(_txt_path('todo')) as f:
         return [Task(l.strip()) for l in f.readlines() if l != '\n']
 
@@ -102,6 +105,17 @@ def display_relevant_tickler_items():
     print('-------')
     for item in items:
         print(item)
+
+
+def display_overview_todos():
+    overview_todos = [
+        todo.line
+        for todo in _read_todos()
+        if todo.priority is not None or (todo.due_date and todo.due_date >= TODAY)
+    ]
+    print(f'PRIORITY TODOS ({len(overview_todos)})')
+    print('-'*len('PRIORITY TODOS'))
+    print('\n'.join(overview_todos))
 
 
 def cat(txt_file):
@@ -166,14 +180,14 @@ def ls(group_by, where):
     excluded = [w.lstrip('~') for w in where if w.startswith('~')]
 
     all_vals = set(
-        v for task in _read() for k, v in task.kv_pairs.items() if k == group_by
+        v for task in _read_todos() for k, v in task.kv_pairs.items() if k == group_by
     )
     vals = sorted(all_vals)
     if group_by in ORDERS:
         vals = [v for v in ORDERS[group_by] if v in all_vals]
     for val in vals:
         print(f'{group_by}:{val}')
-        for task in sorted(_read(), key=lambda x: x.title):
+        for task in sorted(_read_todos(), key=lambda x: x.title):
             if task.is_complete:
                 continue
             # TODO show anything without key as well
@@ -190,14 +204,14 @@ def ls(group_by, where):
 
 @click.command('contexts')
 def contexts():
-    counter = collections.Counter(c for task in _read() for c in task.contexts)
+    counter = collections.Counter(c for task in _read_todos() for c in task.contexts)
     for k, v in counter.most_common():
         print(f'{v} {k}')
 
 
 @click.command('projects')
 def projects():
-    counter = collections.Counter(c for task in _read() for c in task.projects)
+    counter = collections.Counter(c for task in _read_todos() for c in task.projects)
     for k, v in counter.most_common():
         print(f'{v} {k}')
 
@@ -206,7 +220,7 @@ def projects():
 @click.argument('keys', default='t')
 def missing_key(keys):
     keys = keys.split(',')
-    for task in _read():
+    for task in _read_todos():
         if all(key in task.kv_pairs for key in keys):
             continue
         print(task.line)
@@ -214,7 +228,7 @@ def missing_key(keys):
 
 @click.command('overview')
 def overview():
-    cat('inbox')
+    display_overview_todos()
     print('\n')
     cat('tracking')
     print('\n')
