@@ -9,6 +9,16 @@ import click
 TODAY = datetime.datetime.utcnow().date()
 
 TODOTXT_DIR = "/Users/ryan/Dropbox/Apps/Todotxt+/"
+
+TXT_FILES = ["done", "inbox", "log", "recurring", "tickler", "todo", "tracking"]
+
+
+def _txt_path(txt_file):
+    if txt_file in TXT_FILES:
+        return os.path.join(TODOTXT_DIR, f'{txt_file}.txt')
+    raise Exception(f'{txt_file} not in {TXT_FILES}')
+
+
 # convert to enum?
 INBOX_PATH = os.path.join(TODOTXT_DIR, "inbox.txt")
 LOG_PATH = os.path.join(TODOTXT_DIR, "log.txt")
@@ -64,8 +74,8 @@ def _get_date(date_str):
 
 
 def _read():
-    with open(TODO_PATH) as f:
-        return [Task(l.strip()) for l in f.readlines()]
+    with open(_txt_path('todo')) as f:
+        return [Task(l.strip()) for l in f.readlines() if l != '\n']
 
 
 def _date_thought(thought):
@@ -79,7 +89,7 @@ def _append(filepath, thoughts):
 
 
 def display_relevant_tickler_items():
-    with open(TICKLER_PATH) as f:
+    with open(_txt_path('tickler')) as f:
         lines = list(f.readlines())
         items = [
             line.strip()
@@ -113,7 +123,7 @@ def vim_to_inbox():
         body = now + '\n' + f.read()
 
     # append contents of tmp file to inbox
-    with open(INBOX_PATH, 'a') as f:
+    with open(_txt_path('inbox'), 'a') as f:
         f.write('\n')
         f.write(body)
         f.write('\n')
@@ -223,19 +233,20 @@ def add_to_inbox(thought):
     if thought == '':
         vim_to_inbox()
         return
-    _append(INBOX_PATH, [_date_thought(thought)])
+    _append(_txt_path('inbox'), [_date_thought(thought)])
 
 
 @click.command('log')
 @click.argument('thought')
 def add_to_log(thought):
-    _append(LOG_PATH, [_date_thought(thought)])
+    _append(_txt_path('log'), [_date_thought(thought)])
 
 
 @click.command('track')
 @click.argument('thought')
 def add_to_tracking(thought):
-    _append(TRACKING_PATH, [_date_thought(thought)])
+    _append(_txt_path('tracking'), [_date_thought(thought)])
+
 
 @click.command('add-recurring')
 @click.argument('cadence')
@@ -245,7 +256,7 @@ def add_recurring_to_todo(cadence):
     with open(os.path.join(TODOTXT_DIR, 'recurring.txt'), 'r') as f:
         body = f.read()
     lines = [line for line in body.split('\n') if f'@{cadence}' in line]
-    _append(TODO_PATH, lines)
+    _append(_txt_path('todo'), lines)
 
 
 # ---------------------------------------------------------------
