@@ -145,12 +145,12 @@ def ls(group_by, where):
                 continue
             # TODO show anything without key as well
             if task.kv_pairs.get(group_by) == val:
-                if included != [] and not any(w in task.title for w in included):
+                if included != [] and not any(w in task.line for w in included):
                     continue
-                if excluded != [] and any(w in task.title for w in excluded):
+                if excluded != [] and any(w in task.line for w in excluded):
                     continue
                 line = ' '.join(
-                    x for x in task.title.split() if not x.startswith(f'{group_by}:')
+                    x for x in task.line.split() if not x.startswith(f'{group_by}:')
                 )
                 print(f'    {line}')
 
