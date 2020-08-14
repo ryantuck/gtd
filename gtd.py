@@ -195,15 +195,29 @@ def display_relevant_tickler_items():
         print(item)
 
 
-def display_overview_todos():
+def display_overview_todos(filters):
     overview_todos = [
         todo.line
         for todo in _read_todos()
         if todo.priority is not None or (todo.due_date and todo.due_date >= TODAY)
     ]
+    if filters:
+        overview_todos = [todo for todo in overview_todos if filters in todo]
     print(f'PRIORITY TODOS ({len(overview_todos)})')
     print('-' * len('PRIORITY TODOS'))
     print('\n'.join(overview_todos))
+
+
+def display_tracking(filters):
+    with open(_txt_path('tracking'), 'r') as f:
+        body = f.read()
+    lines = body.split('\n')
+    if filters:
+        lines = [line for line in lines if filters in line]
+    print(f'TRACKING ({len(lines)})')
+    print('-' * len('tracking'))
+    for line in lines:
+        print(line)
 
 
 def cat(txt_file):
@@ -216,10 +230,11 @@ def cat(txt_file):
 
 
 @click.command('overview')
-def overview():
-    display_overview_todos()
+@click.option('--filters', default=None)
+def overview(filters):
+    display_overview_todos(filters)
     print('\n')
-    cat('tracking')
+    display_tracking(filters)
     print('\n')
     display_relevant_tickler_items()
 

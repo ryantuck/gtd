@@ -1,10 +1,13 @@
+#!/usr/bin/env python3.7
 import os
 import tempfile
+
+import click
 
 import networkx as nx
 
 
-NOTES_PATH = '/Users/ryan/Dropbox/notes'
+NOTES_PATH = '/Users/ryan.tuck/Dropbox/notes'
 
 
 def ls():
@@ -19,6 +22,11 @@ def read(note):
     filepath = os.path.join(NOTES_PATH, f'{note}.md')
     with open(filepath) as f:
         return f.read()
+
+def read_filepath(filepath):
+    with open(filepath) as f:
+        return f.read()
+
 
 
 def _is_tag(word):
@@ -54,8 +62,9 @@ def generate_dot():
 
 
 def _format_tag(tag):
-    note = tag.strip('#')
-    return f'[{tag}]({note}.md)'
+    tag_clean = tag.strip('#+.,').replace('-', ' ')
+    note = tag.strip('#+,.').strip('+')
+    return f'[{tag_clean}]({note}.md)'
 
 
 def _maybe_format(word):
@@ -63,8 +72,23 @@ def _maybe_format(word):
         return _format_tag(word)
     return word
 
-
+@click.command('format')
+@click.argument('note')
 def flesh_out_note(note):
-    body = read(note)
+    body = read_filepath(note)
     words = [_maybe_format(w) for w in body.split()]
-    return ' '.join(words)
+    fmt_body = ' '.join(words)
+    print(fmt_body)
+    return fmt_body
+
+
+
+@click.group()
+def cli():
+    pass
+
+cli.add_command(flesh_out_note)
+
+
+if __name__ == '__main__':
+    cli()
